@@ -1,0 +1,57 @@
+# Required libraries:
+# pip install pandas scikit-learn joblib
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+import joblib
+
+# A simple function to extract key features from a URL
+def extract_features(url):
+    features = {}
+    features['url_length'] = len(url)
+    features['num_dots'] = url.count('.')
+    features['num_hyphens'] = url.count('-')
+    features['has_https'] = 1 if 'https://' in url else 0
+    features['is_shortened'] = 1 if 'bit.ly' in url or 'goo.gl' in url else 0
+    features['has_at_symbol'] = 1 if '@' in url else 0
+    features['has_redirect'] = 1 if '//' in url.replace('https://', '').replace('http://', '') else 0
+    return features
+
+# -----------------
+# Create a Dummy Dataset
+# This is a synthetic dataset. In a real project, you would use a large,
+# pre-labeled dataset of legitimate and phishing URLs.
+# -----------------
+legit_urls = [
+    'https://www.google.com', 'https://www.github.com/streamlit/streamlit',
+    'https://www.wikipedia.org/wiki/Phishing', 'https://docs.python.org/3/',
+    'https://medium.com/towards-data-science/phishing-detection'
+]
+phishing_urls = [
+    'http://paypai.com-login.us', 'https://login-account-update.com/signin',
+    'http://bit.ly/2R0jH1k', 'http://192.168.1.1/login',
+    'https://docs.python.org-security-check.ru'
+]
+
+legit_features = pd.DataFrame([extract_features(url) for url in legit_urls])
+phishing_features = pd.DataFrame([extract_features(url) for url in phishing_urls])
+
+legit_features['label'] = 0  # 0 for legitimate
+phishing_features['label'] = 1  # 1 for phishing
+
+data = pd.concat([legit_features, phishing_features]).reset_index(drop=True)
+
+X = data.drop('label', axis=1)
+y = data['label']
+
+# Train a simple Random Forest Classifier
+model = RandomForestClassifier(random_state=42)
+model.fit(X, y)
+
+# Save the trained model and the feature list for the Streamlit app
+joblib.dump(model, 'phishing_model.pkl')
+joblib.dump(X.columns.tolist(), 'feature_list.pkl')
+
+print("Model training complete and saved.")
